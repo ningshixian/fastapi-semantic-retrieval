@@ -1,0 +1,202 @@
+[
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "您好，请问有什么可以帮助您？",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g1",
+        "question_content": "你好",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "您好，请问有什么可以帮助您？",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g2",
+        "question_content": "你好在吗",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "不客气呦～",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g3",
+        "question_content": "好的",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "感谢您对我们服务的认可，期待再次为您服务。",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g4",
+        "question_content": "谢谢",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "嗨，您好，请问有什么可以帮助您？",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g5",
+        "question_content": "嗨",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "挺好的",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g6",
+        "question_content": "嗨，最近如何?",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "谢谢你。我也一样",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g7",
+        "question_content": "嗨，很高兴见到你",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "内置寒暄库"
+    },
+    {
+        "answer_content_list": [
+            {
+                "answer_id": "",
+                "answer_content": "您好，这里是售后客服，请问有什么可以帮助您？",
+                "answer_type_list": [],
+                "car_label_list": [],
+                "highest_ota_version": "",
+                "lowest_ota_version": "",
+                "status": 1,
+                "valid_begin_time": "",
+                "valid_end_time": ""
+            }
+        ],
+        "id": "",
+        "question_id": "g0",
+        "question_content": "理想同学",
+        "question_type": 0,
+        "similar_question_list": [],
+        "category_all_name": "",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "source": "自定义寒暄库"
+    }
+]

@@ -1,0 +1,41 @@
+# idna==3.4
+# six==1.16
+urllib3==2.0.7
+pandas
+scikit-learn
+numpy==1.24.4
+jieba
+uvicorn
+gunicorn
+starlette
+fastapi
+httpx
+rank_bm25
+bm25s
+rerankers==0.5.3
+faiss-gpu
+huggingface_hub
+jionlp
+loguru
+flashtext
+kafka-python 
+python-snappy
+sqlalchemy
+zhon
+pymysql
+apscheduler
+pytz
+tzdata
+redis
+
+# 针对 cu121 环境
+sentence-transformers==3.0.1  --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+accelerate  --index-url https://pypi.tuna.tsinghua.edu.cn/simple  # pip install -U accelerate
+transformers>=4.38,<4.42
+
+# #针对 cu121 环境
+#pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cu121
+#pip install flash-attn --upgrade    # 2.7.4.post1
+
+# #按需 卸载（pass!）
+#pip uninstall transformer-engine # 否则cu121环境下transformers会报错!

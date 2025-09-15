@@ -1,0 +1,39 @@
+{
+    "answer_content_list": [
+    {
+        "answer_id": "KA001",
+        "answer_content": "<p>这是示例问题的答案内容。</p>",
+        "answer_type_list": [
+            "robot_voice"
+        ],
+        "car_label_list": [
+        {
+            "label_id": "KCL001",
+            "question_id": "KB001",
+            "vehicle_model_id": "VM001",
+            "vehicle_series_id": "VS001",
+            "vehicle_model_name": "示例车型",
+            "vehicle_series_name": "示例车系"
+        }
+        ],
+        "highest_ota_version": "8.0.0",
+        "lowest_ota_version": "7.0.0",
+        "status": 1,
+        "valid_begin_time": "",
+        "valid_end_time": "",
+        "is_default_answer": 0,
+        "third_sms_id": ""
+    }
+    ],
+    "id": "KB001",
+    "question_id": "KB001",
+    "question_content": "这是一个示例问题？",
+    "question_type": 0,
+    "similar_question_list": [],
+    "category_all_name": "示例分类",
+    "status": 1,
+    "valid_begin_time": "2025-01-01 00:00:00",
+    "valid_end_time": "2125-01-01 00:00:00",
+    "base_name": "示例库",
+    "source": "知识平台"
+}

@@ -1,0 +1,37 @@
+# idna==3.4
+# six==1.16
+urllib3==2.0.7
+pandas
+scikit-learn
+numpy
+jieba
+uvicorn
+gunicorn
+starlette
+fastapi
+httpx
+rank_bm25
+bm25s
+rerankers==0.5.3
+faiss-gpu
+huggingface_hub
+jionlp
+loguru
+flashtext
+kafka-python 
+python-snappy
+sqlalchemy
+zhon
+pymysql
+apscheduler
+pytz
+tzdata
+redis
+
+# # 针对 cu117 环境
+# sentence-transformers==2.5.1  --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+sentence-transformers==3.0.1  --index-url https://pypi.tuna.tsinghua.edu.cn/simple
+transformers>=4.38,<4.42
+
+# # 针对 cu117 环境
+torch==2.0.1

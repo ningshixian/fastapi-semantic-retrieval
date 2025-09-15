@@ -1,0 +1,100 @@
+[
+    {
+        "entityDesc": "对国内11位手机号码的提取，以及7位或8位的座机号码提取",
+        "entityName": "phoneNumber",
+        "entityRule": "11位国内手机号，例如，15089744561;带区号的座机号，例如，0571(可有可无)-67000000(7位或8位都支持)",
+        "id": "00002-sys",
+        "parameterName": "系统.电话号码"
+    },
+    {
+        "entityDesc": "对邮箱地址的提取",
+        "entityName": "email",
+        "entityRule": "支持邮箱格式为username@domain.[com|cn]或者两位英文字母以上后缀",
+        "id": "00003-sys",
+        "parameterName": "系统.邮箱"
+    },
+    {
+        "entityDesc": "对整数的提取，支持中文表示的数字和阿拉伯数字",
+        "entityName": "number",
+        "entityRule": "“七百零贰”、“702”都归一化为“702”",
+        "id": "00004-sys",
+        "parameterName": "系统.数字"
+    },
+    {
+        "entityDesc": "对日期时间的提取，支持提取时间点，时间段和循环时间",
+        "entityName": "datetime",
+        "entityRule": "每周六",
+        "id": "00005-sys",
+        "parameterName": "系统.日期时间"
+    },
+    {
+        "entityDesc": "对申通物流单号的提取",
+        "entityName": "expressID",
+        "entityRule": "对申通物流单号的提取",
+        "id": "00006-sys",
+        "parameterName": "系统.物流编号"
+    },
+    {
+        "entityDesc": "对所有字符的提取，将把用户发的整条消息作为实体值保存下来",
+        "entityName": "stringType",
+        "entityRule": "所有字符",
+        "id": "00007-sys",
+        "parameterName": "系统.字符串"
+    },
+    {
+        "entityDesc": "对国内主要航空公司和部分国际航空公司航班号的提取",
+        "entityName": "flightNumber",
+        "entityRule": "国内航空公司，例如，国航CA4309, 归一化为“CA4309”;国际航空公司，例如，菲律宾菲鹰航空2P9746，归一化为“2P9746”",
+        "id": "00008-sys",
+        "parameterName": "系统.航班号"
+    },
+    {
+        "entityDesc": "对中国大陆+港澳台范围内6位邮政编码的提取",
+        "entityName": "zipcode",
+        "entityRule": "6位邮编，例如，100007",
+        "id": "00009-sys",
+        "parameterName": "系统.邮编"
+    },
+    {
+        "entityDesc": "对全国范围内5451个区县的提取",
+        "entityName": "county",
+        "entityRule": "“滨江”、“滨江区”都归一化为“滨江区”",
+        "id": "00010-sys",
+        "parameterName": "系统.区县"
+    },
+    {
+        "entityDesc": "对34个省份的提取，包括5个自治区，4个直辖市，港、澳2个特别行政区",
+        "entityName": "province",
+        "entityRule": "“浙江”、“浙江省”都归一化为“浙江省”",
+        "id": "00011-sys",
+        "parameterName": "系统.省份"
+    },
+    {
+        "entityDesc": "对全国范围358个城市的提取，包含4个直辖市，港、澳2个特别行政区",
+        "entityName": "city",
+        "entityRule": "“北京市”、“首都”、“帝都”都归一化为“北京”",
+        "id": "00012-sys",
+        "parameterName": "系统.中国城市"
+    },
+    {
+        "entityDesc": "对世界范围内8395个城市的提取",
+        "entityName": "foreignCity",
+        "entityRule": "“旧金山”、“旧金山市”都归一化为“旧金山”",
+        "id": "00013-sys",
+        "parameterName": "系统.海外城市"
+    },
+    {
+        "entityDesc": "对世界范围内196个国家名称的提取",
+        "entityName": "country",
+        "entityRule": "“中国”归一化为“中华人民共和国”",
+        "id": "00014-sys",
+        "parameterName": "系统.国家"
+    },
+    {
+        "entityDesc": "对国内15位和18位身份证号的提取",
+        "entityName": "idCardNumber",
+        "entityRule": "15位或18位身份证号",
+        "id": "00015-sys",
+        "parameterName": "系统.身份证号"
+    }
+]

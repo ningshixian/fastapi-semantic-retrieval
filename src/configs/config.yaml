@@ -1,0 +1,123 @@
+# 环境配置
+prod:
+  path_root: "/path/to/project/root"
+  fine_tuned_folder: "/path/to/finetuned/models"
+  model_cache_folder: "/path/to/model/cache"
+  
+  # Kafka 配置
+  kafka:
+    bootstrap_servers:
+      - host1:port1
+      - host2:port2
+      - host3:port3
+    topic_name: topic_name_placeholder
+    client_id: client_id_placeholder
+    group_id: consumer_group_id
+    auto_offset_reset: latest
+    robot_name: robot_identifier
+    bot_id_needed: bot_id_placeholder
+
+test:
+  path_root: "/path/to/test/root"
+  fine_tuned_folder: "{{ path_root }}/finetuned_models"
+  model_cache_folder: "/path/to/test/models"
+  
+  # Kafka 配置
+  kafka:
+    bootstrap_servers:
+      - host1:port1
+      - host2:port2
+      - host3:port3
+    topic_name: test_topic_name
+    client_id: test_client_id
+    group_id: test_consumer_group
+    auto_offset_reset: latest
+    robotName: test_robot_name
+    bot_id_needed: test_bot_id
+
+# Redis配置
+redis:
+  redis_sentinel_list:
+    - "redis-sentinel-host:port"
+  sentinel_master: "sentinel-master-name"
+  redis_password: "redis_password_placeholder"
+  snapshot_key: "knowledge:snapshot:{{ kafka.group_id }}:{{ kafka.bot_id_needed }}"
+
+# 预训练模型配置
+pretrained_model_config:
+  model1: "{{ model_cache_folder }}/model1-path"
+  model2: "{{ model_cache_folder }}/model2-path"
+  model3: "{{ model_cache_folder }}/model3-path"
+npy_path: "{{ path_root }}/data/embeddings.npy"
+
+# 微调模型配置
+fine_tuned_model_config:
+  model1:
+    - "{{ fine_tuned_folder }}/model1-finetuned"
+    - "{{ path_root }}/data/model1.embeddings.npy"
+  model2:
+    - "{{ fine_tuned_folder }}/model2-finetuned"
+    - "{{ path_root }}/data/model2.embeddings.npy"
+  model3:
+    - "{{ fine_tuned_folder }}/model3-finetuned"
+    - "{{ path_root }}/data/model3.embeddings.npy"
+
+# 重排序配置
+rerank_cross_model: 
+  - "/reranker-model-1"
+  - "/reranker-model-2"
+  - "/reranker-model-3"
+rerank_model_path: "{{ model_cache_folder }}{{ rerank_cross_model.0 }}"
+use_cuda: true
+use_rank: true
+
+# 文件路径配置
+paths:
+  qa:
+    greeting: "{{ path_root }}/data/greeting.json"
+    robot: "{{ path_root }}/data/robot_knowledge.json"
+    common: "{{ path_root }}/data/common_knowledge.json"
+    increment: "{{ path_root }}/data/increment_knowledge.json"
+  kafka:
+    intent: "{{ path_root }}/data/intent.json"
+    param: "{{ path_root }}/data/param.json"
+    entity: "{{ path_root }}/data/entity.json"
+    slot: "{{ path_root }}/data/slot.json"
+    onetouch: "{{ path_root }}/data/onetouch.json"
+    increment_intent: "{{ path_root }}/data/increment_intent.json"
+  entities:
+    sys: "{{ path_root }}/data/entity_sys.json"
+    algo: "{{ path_root }}/data/entity_algo.json"
+    car: "{{ path_root }}/data/slot_car.json"
+
+# 评测配置
+eval:
+  testset_folder: "{{ path_root }}/eval/testset"
+  test_set_path: "{{ path_root }}/eval/testset/test_data.csv"
+  eval_path: "{{ path_root }}/eval/testset/evaluate_{}_ts_{}.csv"
+  eval_path_filter: "{{ path_root }}/eval/testset/evaluate_{}_ts_{}_filter.csv"
+
+# 训练数据
+train:
+  train_similar_qq_path: "{{ path_root }}/data/similar_questions.csv"
+
+# URLs
+urls: 
+  full_update: "http://localhost:port/endpoint1"
+  full_update_recommend: "http://localhost:port/endpoint2"
+  update_faq_onetouch: "http://localhost:port/endpoint3"
+  incremental_update: "http://localhost:port/endpoint4"
+  summary_url: "https://api.example.com/endpoint"
+
+threshold_priority:
+  # 置信度阈值
+  high_threshold: 0.88
+  low_threshold: 0.44
+  recommend_threshold: 0.74
+  # 知识来源优先级
+  high_priority:
+    - 1
+    - 2
+  low_priority:
+    - 4
+    - 5
