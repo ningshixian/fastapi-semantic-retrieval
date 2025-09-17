@@ -26,21 +26,10 @@ from configs.config import paths   # 各类路径，从配置文件加载
 from schemas.response import response_code
 from src.main import app as application  # 主应用引入
 
-# Redis 工具示例（根据实际替换）
+# 创建Redis客户端
 from utils import RedisUtilsSentinel
 from configs.config import redis_config, snapshot_key
-
-# 初始化 Redis 客户端与数据
 redis_client = RedisUtilsSentinel(redis_config.__dict__)
-try:
-    snap = json.loads(redis_client.get(snapshot_key))
-    intent_dict, param_dict, entity_dict = (
-        snap["data"]["intent2param"],
-        snap["data"]["param2ent"], 
-        snap["data"]["ent2vocab"]
-    )
-except Exception:
-    intent_dict, param_dict, entity_dict = {}, {}, {}
 
 # 全局变量
 global_new_docs: List[Dict] = []
@@ -88,18 +77,18 @@ def full_update(request: Request):
 
         # 重新加载实体抽取器
         from src.components.extractors.ner import EntityExtractor
-        uie = EntityExtractor(paths.slot_data, paths.entity_data)
+        _uie = EntityExtractor(paths.slot_data, paths.entity_data)
+        application.set_uie(_uie)
 
         # 更新意图与实体字典
         try:
             snap = json.loads(redis_client.get(snapshot_key))
-            intent_dict, param_dict, entity_dict = (
-                snap["data"]["intent2param"],
-                snap["data"]["param2ent"], 
-                snap["data"]["ent2vocab"]
-            )
+            application.set_intent_params(snap["data"].get("intent2param", {}),
+                                        snap["data"].get("param2ent", {}),
+                                        snap["data"].get("ent2vocab", {}))
+            logger.info("Loaded snapshot from Redis successfully.")
         except Exception:
-            intent_dict, param_dict, entity_dict = {}, {}, {}
+            logger.error(f"Failed to load snapshot from Redis: {e}")
 
         torch_gc()
         logger.info("FAQ 系统全量更新成功")
@@ -152,18 +141,18 @@ def update_faq_special(request: Request):
 
         # 重新加载实体抽取器
         from src.components.extractors.ner import EntityExtractor
-        uie = EntityExtractor(paths.slot_data, paths.entity_data)
+        _uie = EntityExtractor(paths.slot_data, paths.entity_data)
+        application.set_uie(_uie)
 
         # 更新意图与实体字典
         try:
             snap = json.loads(redis_client.get(snapshot_key))
-            intent_dict, param_dict, entity_dict = (
-                snap["data"]["intent2param"],
-                snap["data"]["param2ent"], 
-                snap["data"]["ent2vocab"]
-            )
-        except Exception:
-            intent_dict, param_dict, entity_dict = {}, {}, {}
+            application.set_intent_params(snap["data"].get("intent2param", {}),
+                                        snap["data"].get("param2ent", {}),
+                                        snap["data"].get("ent2vocab", {}))
+            logger.info("Loaded snapshot from Redis successfully.")
+        except Exception as e:
+            logger.error(f"Failed to load snapshot from Redis: {e}")
 
         torch_gc()
         logger.info("FAQ 特定领域更新成功")

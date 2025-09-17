@@ -3,6 +3,7 @@ FastAPI application module (generalized version)
 """
 import os
 import sys
+import json
 import inspect
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -10,7 +11,7 @@ from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 
 # ✅ 路由模块（泛化名称）
-from src.api.api import router as api_router  
+from api.api import router as api_router  
 
 # ✅ 配置路径（泛化）
 from configs.config import paths  
@@ -33,14 +34,70 @@ nohup gunicorn application:app -c configs/gunicorn_config_api.py > logs/app.log 
 ------------------------------------------------
 """
 
-def get_application() -> FastAPI:
+
+# 提供全局状态管理
+# 重要组件都可以作为全局单例访问，避免了重复初始化的开销
+class AppState:
+    def __init__(self):
+        self.INSTANCE = None
+        self.main_faq = None
+        self.recommendation_faq = None
+        self.voice_faq = None
+        self.uie = None
+        self.intent_dict = {}
+        self.param_dict = {}
+        self.entity_dict = {}
+
+
+app_state = AppState()
+
+
+# ------------------------------
+# Lifespan Manager
+# ------------------------------
+# async def lifespan(app: FastAPI):
+def lifespan(app: FastAPI):
+    """
+    FastAPI lifespan handler: init resources here.
+    """
+    # 初始化 FAQ 系统
+    app_state.recommendation_faq = FAQ([paths.qa.common])
+    app_state.main_faq = FAQ([paths.qa.robot, paths.kafka.onetouch, paths.qa.greeting])
+    app_state.INSTANCE = app_state.main_faq
+    # 初始化 NER 模块
+    app_state.uie = EntityExtractor(paths.kafka.slot, paths.entities.car)
+    # 加载 Redis 快照
+    try:
+        # 创建Redis客户端
+        from utils import RedisUtilsSentinel
+        from configs.config import redis_config, snapshot_key
+        redis_client = RedisUtilsSentinel(redis_config.__dict__)
+        snap = json.loads(redis_client.get(snapshot_key))
+        app_state.intent_dict = snap["data"].get("intent2param", {})
+        app_state.param_dict = snap["data"].get("param2ent", {})
+        app_state.entity_dict = snap["data"].get("ent2vocab", {})
+        logger.info("Loaded snapshot from Redis successfully.")
+    except Exception as e:
+        logger.error(f"Failed to load snapshot from Redis: {e}")
+
+    # 自动注册路由
+    # API router
+    api_prefix: str = "/api"
+    app.include_router(api_router, prefix=api_prefix)
+
+    yield
+
+
+def create_app() -> FastAPI:
     """Create and configure a FastAPI application."""
     dependencies = []
 
     application = FastAPI(
         title="Knowledge Semantic Search API",
         description="A semantic search service for knowledge-based question answering",
-        dependencies=dependencies if dependencies else None
+        dependencies=dependencies if dependencies else None, 
+        lifespan=lifespan,
+        version="1.0.0"
     )
 
     # CORS settings
@@ -52,51 +109,27 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # API router
-    api_prefix: str = "/api"
-    application.include_router(api_router, prefix=api_prefix)
-
     return application
 
 
 # ===== 全局访问方法 =====
-def get():
-    """Returns the global main service instance."""
-    return INSTANCE
+def get_instance() -> FAQ:
+    return app_state.INSTANCE
 
-def get_main_service():
-    """Returns the main FAQ/Q&A instance."""
-    return main_service
+def get_main_faq() -> FAQ:
+    """获取主FAQ实例"""
+    return app_state.main_faq
 
-def get_recommendation_service():
-    """Returns the recommendation FAQ instance."""
-    return recommendation_service
+def get_uie() -> EntityExtractor:
+    """获取实体识别实例"""
+    return app_state.uie
 
-def get_entity_extractor():
-    """Returns the entity extraction instance."""
-    return entity_extractor
+def set_uie(_uie):
+    app_state.uie = _uie
 
 
 # ===== 初始化应用 =====
-app = get_application()
-
-# ===== 加载核心服务（具体路径已泛化） =====
-main_service = FAQ([
-    paths.qa.main_source, 
-    paths.qa.secondary_source, 
-    paths.qa.greeting_source
-])
-recommendation_service = FAQ([
-    paths.qa.common_source
-])
-INSTANCE = main_service
-
-# ===== 加载实体识别模块 =====
-entity_extractor = EntityExtractor(
-    paths.entity.slot_model, 
-    paths.entity.entity_model
-)
-# entity_extractor.entity_extract(text, "entityType", {})
+app = create_app()
 
 
 if __name__ == "__main__":
@@ -107,7 +140,7 @@ if __name__ == "__main__":
 
     import uvicorn
     uvicorn.run(
-        app="application:app", 
+        app, 
         host="0.0.0.0", 
         port=8000, 
         workers=1

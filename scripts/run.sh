@@ -10,8 +10,10 @@ export CUDA_VISIBLE_DEVICES=3
 # ==================================================================== #
 
 # 安装必要的软件
-apt-get update
-apt-get install lsof
+apt-get/yum update
+apt-get/yum install lsof
+conda install -c conda-forge just
+
 
 # 如果是第一次部署服务 or 服务迁移，clone 最新项目代码
 git clone https://xxx.git

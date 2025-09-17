@@ -91,16 +91,6 @@ class ConditionMatcher:
     """条件匹配类（示例逻辑，具体业务需自行扩展）"""
     
     @staticmethod
-    def match_conditions(answer: Dict[str, Any], 
-                        user_conditions: Dict[str, Any]) -> float:
-        score = 0.0
-        score += ConditionMatcher._match_car_type(answer, user_conditions)
-        score += ConditionMatcher._match_ota_version(answer, user_conditions)
-        if not ConditionMatcher._validate_answer(answer):
-            score = 0
-        return round(score, 3)
-    
-    @staticmethod
     def _match_car_type(answer: Dict[str, Any], 
                        user_conditions: Dict[str, Any]) -> float:
         """车型匹配逻辑示例"""
@@ -112,11 +102,11 @@ class ConditionMatcher:
         normalize = lambda x: re.sub(r'[_\s]', '', x.lower())
         if user_cars:
             if any([normalize(car) in normalize(car_label) for car in user_cars]):
-                return 0.4
+                return True
         else:
             if not car_label:
-                return 0.4
-        return 0.0
+                return True
+        return False
     
     @staticmethod
     def _match_ota_version(answer: Dict[str, Any], 
@@ -131,25 +121,13 @@ class ConditionMatcher:
                 if lowest_v and highest_v:
                     if any([float(lowest_v) <= float(ver) <= float(highest_v) 
                            for ver in user_versions]):
-                        return 0.3
+                        return True
             except ValueError:
                 logger.warning(f"版本转换失败: {lowest_v}, {highest_v}")
         else:
             if not lowest_v and not highest_v:
-                return 0.3
-        return 0.0
-    
-    @staticmethod
-    def _validate_answer(answer: Dict[str, Any]) -> bool:
-        """有效性验证"""
-        if answer.get("status") != 1:
-            return False
-        current_time = str(datetime.now())
-        if answer.get("valid_begin_time") and answer["valid_begin_time"] > current_time:
-            return False
-        if answer.get("valid_end_time") and answer["valid_end_time"] < current_time:
-            return False
-        return True
+                return True
+        return False
 
     @staticmethod
     def _is_valid_time(valid_begin_time, valid_end_time, current_time):
@@ -174,6 +152,7 @@ class ConditionMatcher:
         valid_results = []
         for result in search_results:
             meta = result.get('meta', {})
+            # 检查主问题的启用状态、删除状态、有效期
             if meta.get('status') != 1 or meta.get('is_delete', 0) != 0:
                 continue
             if not ConditionMatcher._is_valid_time(
@@ -182,18 +161,28 @@ class ConditionMatcher:
                 current_time
             ):
                 continue
-            answer_content_list = meta.get('answer_content_list', [])
+            # 检查答案的启用状态、删除状态、有效期
+            answers = meta.get('answers', [])
             valid_answers = []
-            for answer in answer_content_list:
+            for answer in answers:
                 if answer.get('status') != 1 or answer.get('is_delete', 0) != 0:
                     continue
-                if ConditionMatcher._is_valid_time(
+                if not ConditionMatcher._is_valid_time(
                     answer.get('valid_begin_time'),
                     answer.get('valid_end_time'),
                     current_time
                 ):
-                    valid_answers.append(answer)
-            meta['answer_content_list'] = valid_answers
+                    continue
+                # # 检查答案车型是否匹配
+                # if not ConditionMatcher._match_car_type(answer, user_conditions):
+                #     continue
+                # # 检查答案OTA版本是否匹配
+                # if not ConditionMatcher._match_ota_version(answer, user_conditions):
+                #     continue
+                valid_answers.append(answer)
+            
+            # 更新答案列表
+            meta['answers'] = valid_answers
             valid_results.append(result)
         return valid_results
 
@@ -296,22 +285,27 @@ class FAQSearchEngine:
             response.response4dm = "无效输入"
             return response
 
+        # 1、执行搜索
         search_results = self._execute_search(
             text, top_k, search_strategy, exclude_team
         )
+        # 2、复杂filters逻辑 → 筛选答案
         search_results = ConditionMatcher.validate_results(search_results)
         if not search_results:
             response.response4dm = "未匹配到结果"
             return response
+        # 3、应用匹配优先级逻辑
         search_results = self._apply_priority_logic(search_results)
         if not search_results:
             response.response4dm = "未匹配到结果"
             return response
+        # 保留top_k
         search_results = search_results[:top_k]
+        # 4、处理意图和实体
         if self.intent_extractor:
             for res in search_results:
                 res['match_entity'] = self.intent_extractor.extract_entities(text, res)
-
+        # 5、构建响应
         response.text = text[0]
         response.response4dm = self._build_response4dm(search_results)
         response.match_type = self._classify_match_type(search_results[0]['score'])
