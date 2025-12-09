@@ -38,37 +38,44 @@ class DataPreprocessor:
         
         # 问题元信息（自行根据业务场景扩展）
         question_meta = {
-            "question_id": qa_item.get("question_id"),
-            "question_type": qa_item.get("question_type", 0),
-            "main_question": main_question,
-            "status": qa_item.get("status", 1),
-            "category": qa_item.get("category_name", ""),
+            "question_id": qa_item.get("question_id"),              # 问题ID
+            "question_type": qa_item.get("question_type", 0),          # 问题类型（0标准问题、1知识点）
+            "main_question": main_question,                         # 标注问（standard_sentence）
+            # "long_effective": qa_item.get("longEffective", 0),      # 已删除字段（通过valid_begin_time、valid_end_time判断）
+            "status": qa_item.get("status", 1),                     # 启用状态（0禁用 1启用）
+            "category": qa_item.get("category_all_name", ""),       # 四级分类
             "valid_begin_time": qa_item.get("valid_begin_time"),
-            "valid_end_time": qa_item.get("valid_end_time"),
-            "source": qa_item.get("source"),
+            "valid_end_time": qa_item.get("valid_end_time"), 
+            "source": qa_item.get("source"),                        # 数据来源（1: "知识平台", 2: "其他"）
+            "is_delete": qa_item.get("is_delete", 0),               # 删除状态（0未删除 1已删除）
         }
         answer_meta = qa_item.get("answer_list", [])
 
-        # 主问题
+        # 处理主问题
         if main_question:
             doc = Document(
-                id=qa_item.get("question_id"),
-                content=main_question,
-                meta={**question_meta, "answers": answer_meta, "is_main_question": True}
+                id=qa_item.get("question_id"),  # 主键id，避免重复
+                content=main_question,          # 匹配标准问
+                meta={
+                    **question_meta,
+                    "answers": answer_meta,  
+                    "is_main_question": True
+                }
             )
             documents.append(doc)
 
-        # 相似问题
+        # 处理相似问题（每个相似问题作为独立Document，但共享同一套答案）
         for similar in qa_item.get("similar_question_list", []):
             similar_question = similar.get("similar_question", "")
+            question_meta["is_delete"] = similar.get("is_delete", 0)  # 11.19 update:覆盖更新is_delete
             if similar_question:
                 doc = Document(
-                    id=similar.get("similar_id"),
-                    content=similar_question,
+                    id=similar.get("similar_id"),  # 主键id，避免重复
+                    content=similar_question,      # 匹配相似问
                     meta={
                         **question_meta,
                         "answers": answer_meta,
-                        "similar_id": similar.get("similar_id"),
+                        "similar_id": similar.get("similar_id"),    # 增加一个新的相似问题ID字段
                         "is_main_question": False
                     }
                 )

@@ -55,33 +55,46 @@ uie = application.get_uie()
 
 @dataclass
 class SearchResult:
-    """搜索结果数据类"""
-    text: str
-    origin_text: str
-    response4dm: str
-    match_type: int
-    confidence: float
+    """搜索结果数据类
+    用于封装FAQ搜索的完整结果信息
+    """
+    text: str           # 处理后的查询文本
+    origin_text: str    # 原始查询文本
+    response4dm: str    # 传给DM用于前端展示的响应内容
+    match_type: int     # 匹配类型（0：空 1：精准匹配 3：模糊匹配）
+    confidence: float   # 置信度（top1结果的得分）
     threshold: Dict[str, float]
-    detail_results: List[Dict[str, Any]]
+    detail_results: List[Dict[str, Any]]    # 详细的检索结果列表
 
 
 class QueryProcessor:
-    """文本处理类"""
+    """文本处理类
+
+    主要功能：
+    1. 基础文本清洗（使用data_cleaning工具）
+    2. 高级文本清洗（使用jionlp工具）
+    """
     
     @staticmethod
     def standardize(query: str) -> str:
         if not query:
             return ""
+        
+        # 基础文本清洗
         query = data_cleaning.clean_text(query)
-        query = text_cleaning_lib.clean_text(
+        
+        # 高级文本清洗
+        # 补充：去除文本中的异常字符、冗余字符、HTML标签、括号信息、URL、E-mail、电话号码，全角字母数字转换为半角
+        query = jionlp.clean_text(
             text=query,
-            remove_html_tag=True,
-            convert_full2half=True,
-            remove_exception_char=False,
+            remove_html_tag=True,   # HTML标签
+            convert_full2half=True, # 全角字母数字转换为半角
+            remove_exception_char=False, 
+            # remove_exception_char=True, # 删除文本中异常字符，主要保留汉字、常用的标点，单位计算符号，字母数字等
             remove_url=True,
-            remove_email=True,
-            remove_redundant_char=True,
-            remove_parentheses=False,
+            remove_email=True, 
+            remove_redundant_char=True, # 删除文本中冗余重复字符
+            remove_parentheses=False,    # 删除括号内容 ✖
             remove_phone_number=False,
         )
         return query.strip()
@@ -131,12 +144,16 @@ class ConditionMatcher:
 
     @staticmethod
     def _is_valid_time(valid_begin_time, valid_end_time, current_time):
+        """验证时间是否有效
+        """
+        # 检查开始时间
         if valid_begin_time:
             try:
                 if datetime.strptime(valid_begin_time, "%Y-%m-%d %H:%M:%S") > current_time:
                     return False
             except ValueError:
                 return False
+        # 检查结束时间
         if valid_end_time:
             try:
                 if datetime.strptime(valid_end_time, "%Y-%m-%d %H:%M:%S") < current_time:
@@ -147,7 +164,11 @@ class ConditionMatcher:
 
     @staticmethod
     def validate_results(search_results):
-        """过滤无效结果"""
+        """筛选最终结果作为 Response 的 detail_results!
+        - 主问题、答案的启用状态 (status=1)
+        - 主问题、答案的有效期判断
+        - 主问题、答案的删除状态 (is_delete=0)
+        """
         current_time = datetime.now()
         valid_results = []
         for result in search_results:
@@ -242,7 +263,15 @@ class IntentEntityExtractor:
 
 
 class FAQSearchEngine:
-    """FAQ搜索引擎主类（保留通用搜索流程）"""
+    """FAQ搜索引擎主类
+    
+    主要功能：
+    1. 输入验证和预处理
+    2. 调用FAQ系统执行搜索
+    3. 应用优先级逻辑筛选结果
+    4. 处理意图和实体提取
+    5. 构建最终响应
+    """
     
     def __init__(self, faq_sys, config):
         self.faq_sys = faq_sys
@@ -314,21 +343,31 @@ class FAQSearchEngine:
         return response
     
     def _execute_search(self, text, top_k, search_strategy, exclude_team):
+        # 执行搜索
         results = self.faq_sys.search(text, size=top_k, search_strategy=search_strategy)
+        # 转换库名到ID
         for result in results:
             result["meta"]['source'] = self.lib_name2id.get(result["meta"]["source"], -1)
+        # 排除指定库
         if exclude_team:
             results = [r for r in results if r["meta"]["source"] not in exclude_team]
         return results
     
     def _apply_priority_logic(self, results):
+        """应用匹配优先级逻辑"""
+        # 按来源分组结果
         high_priority_results = [r for r in results if r["meta"].get("source") in self.config.high_priority]
         low_priority_results = [r for r in results if r["meta"].get("source") in self.config.low_priority]
+        # 获取最高分的结果
         top_result = results[0]
+        # 判断是否应该使用低优先级（寒暄库）
         SCORE_DIFF_THRESHOLD = 0.1
         should_use_low_priority = (
+            # top结果来自低优先级库
             top_result["meta"]["source"] in self.config.low_priority
+            # 分数超过阈值
             and top_result["score"] > self.config.low_threshold
+            # 与高优先级最高分相差超过阈值
             and (not high_priority_results or 
                  top_result["score"] - high_priority_results[0]["score"] > SCORE_DIFF_THRESHOLD)
         )
@@ -336,11 +375,11 @@ class FAQSearchEngine:
 
     def _classify_match_type(self, score: float) -> int:
         if score >= self.config.high_threshold:
-            return 1
+            return 1  # 精准匹配
         elif score >= self.config.low_threshold:
-            return 3
+            return 3  # 模糊匹配
         else:
-            return 0
+            return 0  # 不回复
     
     def _build_response4dm(self, results: List[Dict]) -> str:
         lines = [f"{x['score']:.4f}\t{x['content']}" for x in results]
@@ -351,6 +390,7 @@ class FAQSearchEngine:
 
 
 def create_faq_engine(faq_sys, intent_dict, param_dict, entity_dict):
+    # 创建FAQ搜索引擎实例
     engine = FAQSearchEngine(faq_sys, threshold_priority_config)
     engine.set_intent_extractor(intent_dict, param_dict, entity_dict)
     return engine
@@ -367,7 +407,9 @@ def predict(
     request: Request, 
     item: Item4cc
 ):
+    # 创建搜索引擎（可以在应用启动时创建并复用）
     engine = create_faq_engine(faq_sys, intent_dict, param_dict, entity_dict)
+    # 执行搜索
     response = engine.customized_search(
         text=item.text,
         user_id=item.user_id,
@@ -375,6 +417,7 @@ def predict(
         search_strategy=item.search_strategy,
         exclude_team=item.exclude_team,
     )
+    # 转换为响应格式
     response_data = response.__dict__
     if response.match_type == -1:
         return response_code.resp_4001(data=response_data)

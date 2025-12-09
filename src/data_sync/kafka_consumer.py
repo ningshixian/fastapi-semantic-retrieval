@@ -105,19 +105,26 @@ class KnowledgeSyncConsumer:
         logger.info("Consumer started.")
 
         while True:
+            # 每隔 1h=3600s 做一次快照
             if time.time() - self.last_snapshot_time > SNAPSHOT_INTERVAL_SECONDS:
                 self._save_snapshot()
 
+            # 使用 poll 获取批量消息
+            # 提供超时时间参数timeout_ms来控制更新频率. 如果在60s=1min内如果没有消息可用，返回一个空集合
             msg_pack = self.consumer.poll(timeout_ms=DEFAULT_CONSUMER_WAIT_TIME)
             if not msg_pack:
                 continue
 
+            # 遍历每个批次的消息字典
             for tp, messages in msg_pack.items():
-                logger.info(f"Processing {len(messages)} messages from partition {tp.partition}")
+                if len(messages) > 1:
+                    logger.info("-----------------------------------------")
+                    logger.info(f"Processing {len(messages)} messages ...")
                 for msg in messages:
                     self._process_message(msg)
 
     def _process_message(self, msg):
+        """处理单条消息"""
         try:
             value_dict = json.loads(msg.value)
             record = json.loads(value_dict['data'])
@@ -132,6 +139,7 @@ class KnowledgeSyncConsumer:
             # with codecs.open("received_kafka_data.json", 'a', encoding='utf-8') as f:
             #     json.dump(value_dict, f, ensure_ascii=False, indent=4)
 
+            # 分发 handler
             if source == SourceType.BOT_DEPLOY:
                 logger.info("Source=BOT_DEPLOY, save snapshot & update local files")
                 self._save_snapshot()
@@ -157,18 +165,25 @@ class KnowledgeSyncConsumer:
         pass  # 省略意图处理逻辑
 
     def _load_snapshot(self) -> bool:
+        """
+        启动时尝试从 Redis 加载快照。
+        成功恢复返回 True，否则返回 False。
+        """
         if not self.redis_conn:
             return False
         try:
+            logger.info("Loaded snapshot. 初次启动，尝试从 Redis 快照恢复...")
             raw = self.redis_conn.get(snapshot_key)
             if not raw:
                 return False
             snap = json.loads(raw)
             self.knowledge_state.update(snap.get("data", {}))     
-            offsets = snap.get("offsets", {})
+            offsets = snap.get("offsets", {})   # 偏移量
             if offsets:
+                # 手动分配分区和 topic
                 tp = TopicPartition(topic=self.kafka_config.topic_name, partition=0)
                 self.consumer.assign([tp])
+                # 为分区设置偏移量 → 最新
                 offset = offsets.get(str(tp.partition))
                 if offset:
                     self.consumer.seek(tp, offset)
@@ -179,13 +194,29 @@ class KnowledgeSyncConsumer:
         return False
 
     def _save_snapshot(self):
-        if not self.redis_conn or not self.consumer:
+        """保存快照
+        保存知识库和消费者偏移量到 Redis
+        """
+        if not self.redis_conn:
+            logger.warning("Redis connection not provided, cannot save snapshot.")
             return
+        if not self.consumer:
+            logger.warning("Consumer not running, cannot save snapshot.")
+            return
+        
         try:
-            offsets = {str(tp.partition): self.consumer.position(tp) for tp in self.consumer.assignment()}
+            # 获取当前分配到的分区的偏移量
+            # consumer.position(tp) 返回下一个要消费的消息的偏移量，这正是我们需要的
+            offsets = {
+                str(tp.partition): self.consumer.position(tp)
+                for tp in self.consumer.assignment()
+            }
+            if not offsets:
+                logger.warning("No partitions assigned, skipping snapshot with offsets.")
+                return
             snap = {"data": self.knowledge_state, "offsets": offsets, "timestamp": time.time()}
             self.redis_conn.set(snapshot_key, json.dumps(snap))
-            self.last_snapshot_time = time.time()
+            self.last_snapshot_time = time.time() # 更新快照时间
             logger.info(f"Snapshot saved. Offsets: {offsets}")
         except Exception as e:
             logger.error(f"Failed to save snapshot: {e}")
@@ -203,18 +234,27 @@ class KnowledgeSyncConsumer:
             logger.error(f"Failed to write file {path}: {e}")
 
     def _cleanup(self):
+        """清理资源"""
         if self.consumer:
             self.consumer.close()
             logger.info("Consumer closed")
 
 
 class FAQKnowledgeUpdater:
-    """FAQ 知识库更新器示例"""
+    """FAQ知识库更新器
+    
+    关键优化：
+        原子性文件写入
+        异步更新机制
+        重试机制
+        结构化日志
+    """
     def __init__(self):
         self.update_timeout = 30
         self.retry_times = 2
 
     def trigger_update_faq_knowledge(self) -> None:
+        """触发FAQ知识库更新"""
         def update_task():
             try:
                 response = requests.get(
@@ -226,12 +266,16 @@ class FAQKnowledgeUpdater:
             except requests.exceptions.RequestException as e:
                 logger.error(f"FAQ update failed: {e}")
         
-        thread = threading.Thread(target=update_task, name="TriggerFAQUpdate", daemon=True)
+        logger.info("触发faq向量更新......")
+        logger.info(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
+        thread = threading.Thread(target=update_task, name="Trigger FAQ-Vector-Update", daemon=True)
         thread.start()
+        logger.info("已完成！\n")
 
 
 def main(kafka_config, redis_config):
     try:
+        # Redis 多机共享快照
         redis_client = RedisUtilsSentinel(redis_config.__dict__)
         logger.info("Connected to Redis.")
     except Exception as e:
@@ -246,5 +290,7 @@ def main(kafka_config, redis_config):
 
 
 if __name__ == "__main__":
-    logger.info(f"snapshot_key: {snapshot_key}")
+    logger.info(f"snapshot_key: --->【{snapshot_key}】")
+
+    # 运行消费者
     main(kafka_config, redis_config)

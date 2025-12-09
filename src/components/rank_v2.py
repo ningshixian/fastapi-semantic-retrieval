@@ -77,6 +77,9 @@ class PostRank:
         """
         if not isinstance(docs, list) or not isinstance(query, str):
             raise ValueError("docs 必须是列表，query 必须是字符串。")
+        
+        # 若候选结果只有一个，直接返回，防止ranker.rank报错 (https://github.com/AnswerDotAI/rerankers/pull/9)
+        # 注意，需保证BM25召回路的分值已提前归一化
         if len(docs) == 1:
             return docs
 
@@ -91,21 +94,20 @@ class PostRank:
         score_logits = [result.score for result in results]
         scores = torch.sigmoid(torch.tensor(score_logits)).tolist()  # 范围 0~1
         
+        # 得分归一化 - sigmoid
         new_docs = []
+        score_logits = [result.score for result in results]
+        scores = torch.sigmoid(torch.tensor(score_logits)).tolist()  # 0~1 
         for ix, res in enumerate(results):
             docs[res.doc_id]["score"] = scores[ix]
             new_docs.append(docs[res.doc_id])
 
-        # 按得分降序排序
         new_docs.sort(key=lambda x: x["score"], reverse=True)
         return new_docs
 
-    def weighted_fusion(self, hits1, hits2, weights=[0.9, 0.1]):
+    def weighted_fusion(self, hits1, hits2, weights=[0.5, 0.5]):
         """
         对两路召回结果进行加权融合
-        参数:
-            hits1, hits2: 两种召回结果
-            weights: 加权系数
         """
         combined_results = defaultdict(lambda: {"score": 0})
         
@@ -124,7 +126,7 @@ class PostRank:
             else:
                 combined_results[item_id2] = hit2
 
-        # 排序返回
+        # 按分数降序排序并返回结果
         combined_results = sorted(
             combined_results.items(), key=lambda x: x[1]["score"], reverse=True
         )

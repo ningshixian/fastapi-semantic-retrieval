@@ -49,3 +49,39 @@ def entity_extract(
         })
 
     return response_code.resp_200(data=match_entity)
+
+
+@router.post("/ner", summary="算法实体抽取", name="算法实体抽取")
+def ner(
+    request: Request, 
+    text: str=Body(..., embed=True),
+    entity_name: str=Body(default="", embed=True), # 实体名称,对应七鱼的entityType
+    param_name: str=Body(default="", embed=True),  # 变量名称，与实体名称一一对应
+):
+    if isinstance(text, str):
+        text = [text]
+
+    # algorithmEntity 目前映射车型提取，返回提取的第一个结果
+    flag, entity_value, start_idx, end_idx = application.get_uie().entity_extract(
+        text, 
+        entity_mode="algorithmEntity", 
+        entity={
+            "entityName": entity_name,
+            "entityType": 5,
+            "vocab": {}
+    })
+
+    match_entity = []
+    if flag:
+        match_entity.append({
+            'start': start_idx,  #实体位置
+            'end': end_idx,  #实体位置
+            'entity_name': entity_name,  #实体名称,对应七鱼的entityType
+            'entity_value': entity_value,  #实体值
+            'entity_mode': "algorithmEntity",  #实体类型（0-系统/1-枚举/2-正则/3-意图/4-其他/5-算法）
+            'param_name': param_name,  #变量名称，与实体名称一一对应
+            # 'flow_name': intent.get('flowName', '')  #关联流程名称
+            "prebuild": False,  # 是否系统预置实体
+            "is_prebuild": False  # 是否系统预置实体
+        })
+    return response_code.resp_200(data=match_entity)

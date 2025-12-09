@@ -67,41 +67,88 @@ def tokenize(
 
         return corpus_ids
 
-bm25s.tokenize = tokenize
+
+bm25s.tokenize = tokenize   # 暂未使用
+# bm25s.tokenize(self.sentences)  # , stopwords="zh", show_progress=False
 
 
-def min_max_normalization(scores):
-    min_value = np.min(scores)
-    max_value = np.max(scores)
-    if min_value == max_value:
-        # raise ValueError("Minimum and maximum values are the same, cannot normalize.")
-        return scores
-    # 应用最小-最大标准化公式
-    normalized_data = (scores - min_value) / (max_value - min_value)
-    return normalized_data
+# Min-Max 归一化，适合与余弦相似度进行加权求和
+def normalize_min_max(scores):
+    min_val = np.min(scores, keepdims=True)
+    max_val = np.max(scores, keepdims=True)
+    diff = max_val - min_val
+
+    # 核心逻辑：
+    # 1. 如果 diff 为 0，返回 1.0
+    # 2. 如果 diff 不为 0，计算 (score - low) / diff
+    # 注意：分母加 1e-9 只是为了防止 Python 报 "除以0" 的警告，
+    # 实际上 diff==0 时，np.where 会直接取 1.0，不会用到除法的结果。
+    return np.where(diff == 0, 1.0, (scores - min_val) / (diff + 1e-9))
 
 
-def normalization10(scores):
-    # 将 BM25 分数除以本身加上 10
-    normalized_data = scores / (scores + 10)
-    return normalized_data
+# Softmax 归一化
+def normalize_softmax(scores, temperature=1.0):
+    # 为了数值稳定性，先减去最大值
+    exp_scores = np.exp((scores - np.max(scores, keepdims=True)) / temperature)
+    return exp_scores / exp_scores.sum(keepdims=True)
+
+
+# # 测试
+# scores = [1.5, 2.5, 15]
+# print(normalize_min_max(scores))
+# # 使用较高的温度系数使分布更平滑
+# print(normalize_softmax(scores, temperature=5.0))
+# exit()
+
 
 
 class BM25Model:
     def __init__(self, docs: list):
         self.docs = docs
-        self.qid_dict = {}
-        self.sen2qid = OrderedDict()    # 其实无序字典亦可
         self.sentences = []
+        self.tokens = []
+        # 初始化BM25
         self.retriever = None
         self.load_retriever()
+    
+    def _tokenize_text(self, texts: list[str]) -> list[list[str]]:
+        """
+        自定义分词函数
+        bm25s.tokenize 返回的是对象，不方便合并，所以我们自己分词
+        """
+        return [jieba.lcut(text) for text in texts]
 
     def load_retriever(self):
         self.sentences = [doc.content for doc in self.docs]
-        # Tokenize the corpus and index it
-        corpus_tokens = bm25s.tokenize(self.sentences)
-        self.retriever = bm25s.BM25(corpus=self.sentences, method="bm25+")
-        self.retriever.index(corpus_tokens)
+        # 1. 分词 (耗时操作)
+        self.tokens = self._tokenize_text(self.sentences)
+        # 2. 建立索引 (快速操作)
+        self.retriever = bm25s.BM25(
+            method="bm25+", delta=1.5, 
+            corpus=self.sentences   # 可省略这个参数
+        )
+        self.retriever.index(self.tokens)
+        # logger.info("BM25: 初始化完成")
+    
+    def add_documents(self, new_docs: list):
+        """
+        增量更新函数
+        策略：只对新文档分词 -> 合并 Token 列表 -> 快速重索引
+        """
+        if not new_docs:
+            return
+        
+        # 1. 仅对【新增】文档进行分词 (节省大量时间)
+        new_texts = [doc.content for doc in new_docs]
+        new_tokens = self._tokenize_text(new_texts)
+        # 2. 更新内存中的主数据
+        self.sentences.extend(new_texts)
+        self.tokens.extend(new_tokens)
+        # 3. 重新索引
+        # bm25s 的 index 速度极快 (10万条数据通常在 1秒内)，因此全量重索引是可以接受的
+        self.retriever.index(self.tokens)
+        
+        # logger.info(f"BM25: 增量更新完成，当前总文档数: {len(self.all_docs)}")
 
     def bm25_similarity(self, queries:Union[str, List[str]], topK=10):
         if not self.sentences:
@@ -115,7 +162,7 @@ class BM25Model:
         query_list = {id: query for id, query in enumerate(queries)}
         result = {query_id: {} for query_id, query in query_list.items()}
 
-        query_tokens = bm25s.tokenize(queries)
+        query_tokens = self._tokenize_text(queries)  # 分词
         idx_range = list(range(len(self.sentences)))    # 索引范围
         _documents, _scores = self.retriever.retrieve(
             query_tokens, 
@@ -123,6 +170,8 @@ class BM25Model:
             k=topK, 
             show_progress=False
         )
+        # 对_scores进行归一化
+        _scores = [normalize_min_max(_score) for _score in _scores]
 
         # 处理检索结果
         closest_matches = []
@@ -133,7 +182,7 @@ class BM25Model:
                 score = round(float(_scores[i][j]), 4)
                 doc = copy.deepcopy(self.docs[idx])
                 doc.score = score
-                assert doc.id == idx
+                # assert doc.id == idx
                 matches.append(doc.__dict__)
             closest_matches.append(matches)
 

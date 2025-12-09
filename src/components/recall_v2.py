@@ -84,7 +84,7 @@ def remove_duplicates(docs: List[Dict]):
         idx = doc["id"]
         question_id = doc["meta"]["question_id"]
         docs_by_id[question_id].append((idx, doc))
-
+    # 选择最优文档：分数最高，同分时id索引最大
     result = []
     for group in docs_by_id.values():
         _, best_doc = max(group, key=lambda x: (x[1].get("score", -inf), x[0]))
